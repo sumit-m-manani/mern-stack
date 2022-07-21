@@ -8,7 +8,6 @@ router.post("/", createOne);
 // GET all products
 router.get("/", getAll);
 
-
 //GET a single product
 router.get("/:id", getById);
 
