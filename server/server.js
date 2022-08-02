@@ -19,8 +19,10 @@ app.use((req, res, next) => {
 app.use("/product/",productRoutes)
 app.use("/category/",categoryRoutes)
 
+const CONNECTION_URL = process.env.MONGO_URI + "/" + process.env.DB_NAME
+
 //connect to database
-mongoose.connect(process.env.MONGO_URI).then(()=>{
+mongoose.connect(CONNECTION_URL).then(()=>{
     //listen for request
     app.listen(process.env.PORT,()=>{
         console.log(`Database Connected Successfully & Listening to port ${process.env.PORT} !`)

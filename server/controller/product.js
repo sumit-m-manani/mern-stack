@@ -20,7 +20,91 @@ const createOne = async (req, res) => {
 
 const getAll = async (req, res) => {
     try {
-        const getAll = await Product.find()
+
+        const searchKeyword = req.query.keyword || "";
+        console.log("Query : ", req.query)
+
+        let facetOptions = {
+            data: []
+        };
+        if (req.query.page && req.query.limit) {
+            const options = {
+                page: Number(req.query.page || 1),
+                limit: Number(req.query.limit || 2),
+                offset: 0,
+            };
+            options.offset = (options.page - 1) * options.limit;
+
+            facetOptions = {
+                metadata: [
+                    {
+                        $count: "itemCount",
+                    },
+                    {
+                        $addFields: {
+                            page: options.page,
+                            limit: options.limit
+                        }
+                    }
+                ],
+                data: [{ $skip: options.offset }, { $limit: options.limit }]
+            }
+        }
+
+
+        let matchConditions = {};
+
+        if(req.query.hasOwnProperty('keyword')){
+            let keyword = { $regex: '.*' + searchKeyword + '.*', $options: 'i' };
+            let orCondition = [
+                { product_name: keyword },
+                { 'category.category_name': keyword },
+                { status: keyword },
+            ]
+            matchConditions['$or'] = orCondition;
+        }
+
+        let sortOrder = { createdAt: -1 }
+        if (req.query.hasOwnProperty('order_by')) {
+            sortOrder = {}
+            if (req.query.order_by === 'category_name') {
+                sortOrder['category.category_name'] = req.query.order == "asc" ? 1 : -1;
+            }
+            if (req.query.order_by === 'product_name') {
+                sortOrder['productToLower'] = req.query.order == "asc" ? 1 : -1;
+            }
+            if (req.query.hasOwnProperty("order")) {
+                let order = req.query.order == "asc" ? 1 : -1
+                let orderBy = req.query.order_by
+                sortOrder[orderBy] = order;
+            }
+            console.log("sortOrder : ", sortOrder)
+        }
+
+        let getAll = await Product.aggregate([
+            {
+                $lookup: {
+                    from: 'categories',
+                    localField: 'category_id',
+                    foreignField: '_id',
+                    as: 'category',
+                }
+            },
+            {
+                $match: matchConditions
+            },
+            {
+                $sort: sortOrder
+            },
+            {
+                $addFields: {
+                    category: { $arrayElemAt: ["$category", 0] },
+                    price: { $toString: "$product_price" },
+                    productToLower : { $toLower: '$product_name'}
+                }
+            },
+        ]);
+
         res.status(200).json(getAll)
     } catch (error) {
         res.status(400).json({ error_2: error })

@@ -13,7 +13,7 @@ const Categories = () => {
   const url = "/category/";
 
   const getData = async () => {
-    const responce = await axios.get(url);;
+    const responce = await axios.get(url);  
     setCategoryList(responce.data);
   }
 
